@@ -10,8 +10,7 @@
 #define SCARG(type, args)  (type)(*args++)
 
  
-syscall pthread_create(pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void *), void *arg)
-{
+syscall sc_ptcreate(int *args){
     pthread_t *thread = SCARG(pthread_t *, args);
     pthread_attr_t *attr = SCARG(pthread_attr_t *, args);       /* ignore */
     void  *start_routine = SCARG(void *, args);
@@ -24,15 +23,14 @@ syscall pthread_create(pthread_t *thread, pthread_attr_t *attr, void *(*start_ro
      * tickets.  Don't forget to use ready() to move the new process into
      * the PRREADY state.
      */
-	*thread = create(start_routine, INITSTK, INITPRIO, "NAME", 1, arg);
- 	ready(*thread, RESCHED_NO); 
+	thread = create(start_routine, INITSTK, INITPRIO, "THREAD", 1, arg);
+ 	ready(create((void*)thread,INITSTK, INITPRIO,"MAIN1",1,0,NULL), RESCHED_YES); 
     return OK;
 }
 
 
  
-syscall pthread_join(pthread_t thread, void **retval)
-{
+syscall sc_ptjoin(int *args){
     pthread_t thread = SCARG(pthread_t, args);
     void    **retval = SCARG(void **, args);       /* ignore */
 
@@ -51,31 +49,26 @@ syscall pthread_join(pthread_t thread, void **retval)
 }
 
 
-syscall pthread_mutex_lock(pthread_mutex_t *mutex)
-{
+syscall sc_ptlock(int *args){
     pthread_mutex_t *mutex = SCARG(pthread_mutex_t *, args);
 
     /**
      * TODO: Use the atomic CAS operation to secure the mutex lock.
      */
-   
-    irqmask im;
-    im = disable();
-    if(FALSE =  _atomic_compareAndSwapStrong(&mutex, LOCK_UNLOCKED, LOCK_LOCKED | (im & ARM_I_BIT)))
-    {
-    	restore(im);
-	return 1;
+    while(_atomic_compareAndSwapStrong(mutex, PTHREAD_MUTEX_UNLOCKED, PTHREAD_MUTEX_LOCKED) == FALSE){
+	resched();
 }
-    return 0;
+    return OK;
 }
 
 
-syscall pthread_mutex_unlock(pthread_mutex_t *mutex)
+syscall sc_ptunlock(int *args)
 { 
     pthread_mutex_t *mutex = SCARG(pthread_mutex_t *, args);
 
     /**
      * TODO: Release the mutex lock.
      */
-    return lock_release(&mutex);
+    mutex = PTHREAD_MUTEX_UNLOCKED;
+    return OK;
 }

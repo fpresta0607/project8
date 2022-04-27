@@ -158,6 +158,8 @@ syscall  user_putc(int descrp, char character)
     SYSCALL(PUTC);
 }
 
+
+//GETMEM AND FREEMEM 
 syscall sc_getmem(int *args)
 {
     ulong nbytes = SCARG(ulong, args);
@@ -177,7 +179,7 @@ syscall sc_freemem(int *args)
     return freemem(memptr, nbytes);
 }
 
-syscall freemem(void *memptr, ulong nbytes)
+freemem(void *memptr, ulong nbytes)
 {
     SYSCALL(FREEMEM);
 }                 
