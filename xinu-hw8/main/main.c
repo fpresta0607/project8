@@ -31,7 +31,7 @@ void *mythread(void *arg)
 
     int i = 0, local = 0;
 
-    //printf("Adding %d to %d\n", args->array[0], args->array[args->length - 1]);
+    kprintf("Adding %d to %d\n", args->array[0], args->array[args->length - 1]);
     for (i = 0; i < args->length; i++)
     {
         pthread_mutex_lock(args->lock);
@@ -82,7 +82,7 @@ int main()
     for (i = 0; i < THRD_COUNT; i++)
     {
         rc = pthread_create(threads + i, NULL, mythread, args + i);
-        // printf("Spawned thread %d, rc = %d\n", i, rc);
+        kprintf("Spawned thread %d, rc = %d\n", i, rc);
     }
 
     /* Use join() to wait for each thread to complete its work */

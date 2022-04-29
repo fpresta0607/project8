@@ -4,6 +4,7 @@
  */
 /* Embedded Xinu, Copyright (C) 2009, 2020.  All rights reserved. */
 
+#define SCARG(type, args)  (type)(*args++)
 #include <xinu.h>
 
 /**
@@ -19,16 +20,22 @@
  *      ::OK on success; ::SYSERR on failure.  This function can only fail
  *      because of memory corruption or specifying an invalid memory block.
  */
-syscall freemem(void *memptr, ulong nbytes)
+syscall sc_freemem(int *args)
 {
     register struct memblock *block, *next, *prev;
     ulong top;
+    int ps =0;
+    ps = disable();
+ 
+    void *memptr = SCARG(void*, args);
+    ulong nbytes = SCARG(ulong, args);    
 
-    /* make sure block is in heap */
+/* make sure block is in heap */
     if ((0 == nbytes)
         || ((ulong)memptr < freelist.base)
         || ((ulong)memptr > freelist.base + freelist.bound))
     {
+	restore(ps);
         return SYSERR;
     }
 
@@ -45,37 +52,107 @@ syscall freemem(void *memptr, ulong nbytes)
      *      - Coalesce with next block if adjacent
      *      - Restore interrupts
      */
-	int ps = disable();
-		
-		
-	next = (struct memblock*)freelist.head;
-	prev = (struct memblock*)&freelist;
-	while(next!=NULL){
-		if(block < next) {
-			if(prev < block){
-				top = prev->length + nbytes;//retrive top of previous memblock
-				if(top != prev->length){
-					if(top != next->length)	{
-						prev->next = block;
-						block->next = next;
-					}
-				}
-			}
-		}
-		else if(block == next){
-			if(prev < block){
-				top = prev->length + nbytes;//retrive top of previous memblock
-				if(top != prev->length){
-					if(top != next->length){
-						next->length = next->length + block->length;
-					}
-				}
-			}
-		}
-		next = next->next;
-		prev = next;
+    block->length = nbytes;
+    top = ((ulong)block) + block->length;
+    
+    memblk *temp;
+    temp = freelist.head;
+    
+    if((top - 1) > freelist.bound)
+    {	
+	restore(ps);
+	return SYSERR;
     }
-	restore(ps);   
+
+    if(temp == NULL)
+    {
+	freelist.head = block;
+	freelist.head->length = nbytes;
+	freelist.head->next = NULL;
+	freelist.size += nbytes;
+	restore(ps);
+	return OK;
+    }
+
+ while(temp != NULL)
+    {
+	ulong tTop;
+	tTop = ((ulong)temp) + temp->length - 1;
+	if(((((ulong)block) <= ((ulong)temp)) && (((ulong)temp) < top)) || ((((ulong)block) <= tTop) && (tTop < top)))
+	{
+	    restore(ps);
+	    return SYSERR;
+	}
+	else temp = temp->next;
+    }
+
+    prev = freelist.head;  
+
+    while((prev->next != NULL) && ((ulong)prev->next < (ulong)block))
+    {
+	prev = prev->next;
+    }
+
+    next = prev->next;
+    
+
+    if((ulong)block < (ulong)prev)
+    {
+	if(top == (ulong)prev)
+	{
+	    block->length += prev->length;
+	    block->next = prev->next;
+	    freelist.head = block;
+	}	
+	else
+	{
+	    block->next = freelist.head;
+	    freelist.head = block;	    
+	}
+    }
+    else if(next == NULL)
+    {  
+	if((((ulong)prev) + prev->length) == (ulong)block)
+	{
+	    prev->length += nbytes;
+	}
+	else
+	{
+	    block->next = prev->next;
+	    prev->next = block;
+	}
+	
+    }
+    else 
+    {	
+	ulong prevTop = ((ulong)prev) + prev->length;
+	
+	if((prevTop == (ulong)block) && ((((ulong)block) + block->length) == (ulong)next))
+	{
+	    prev->next = next->next;
+	    prev->length += nbytes;
+	    prev->length += next->length;
+	}
+	else if(prevTop == (ulong)block)
+	{
+	    prev->length += nbytes;
+	}
+	else if((((ulong)block) + block->length) == (ulong)next)
+	{
+	    block->next = next->next;
+	    block->length += next->length;
+	    prev->next = block;
+	}
+	else
+	{
+	    prev->next = block;
+	    block->next = next;
+	}	
+    }
+
+    freelist.size += nbytes;
+
+    restore(ps);    
 
     return OK;
 }

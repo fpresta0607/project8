@@ -4,6 +4,8 @@
  */
 /* Embedded Xinu, Copyright (C) 2009, 2020.  All rights reserved. */
 
+#define SCARG(type, args)  (type)(*args++)
+
 #include <xinu.h>
 
 /**
@@ -18,12 +20,16 @@
  *      The returned pointer is guaranteed to be 8-byte aligned.  Free the block
  *      with memfree() when done with it.
  */
-void *getmem(ulong nbytes)
+void * sc_getmem(int *args)
 {
+    ulong nbytes = SCARG(ulong, args);
     register memblk *prev, *curr, *leftover;
-
-    if (0 == nbytes)
+	int ps = 0;
+	ps = disable();
+   
+     if (0 == nbytes)
     {
+	restore(ps);
         return (void *)SYSERR;
     }
 
@@ -38,50 +44,73 @@ void *getmem(ulong nbytes)
      *      - Restore interrupts
      *      - return memory address if successful
      */
-	int ps = disable();
-		
-
 	
-	curr = (struct memblock *)(freelist.head);
-	prev = (struct memblock *) &freelist;
+ curr = freelist.head;
+    curr->length = freelist.head->length;
+    curr->next = freelist.head->next;
 
-	memhead *freehead = &freelist;
-	prev = NULL;
-//	kprintf("start");
-	while(curr != NULL)
-	{
-
-
-		if((curr->length) > nbytes)
-		{
-			leftover = (struct memblock *)(nbytes + ((ulong)curr));
-			leftover->length = (curr->length) - nbytes;
-		
-			freehead->size = freehead->size - nbytes;
-
-			leftover->next = curr->next;
-		if(prev!=NULL)
-		{
-			prev->next = leftover;
-			
-		}else{
-			freehead->head = leftover;
-		}
-		
-			curr->length = nbytes;
-			restore(ps);
-//			kprintf("return");
-			return(curr);
-		
-		}
-		
-
+    while(curr != NULL) 
+    {
+	if(curr->length < nbytes) 
+	{       
 		prev = curr;
+		prev->length = curr->length;
+		prev->next = curr->next;
 		curr = curr->next;
-	
-	
+		curr->length = prev->next->length;
+		curr->next = prev->next->next;
 	}
-//	kprintf("DONE");
-	restore(ps);	
-return (void *)SYSERR;
+	else break;
+    }
+
+    if(curr != NULL)
+    {	
+	   
+	memblk *start = (memblk *)(((ulong)curr) + nbytes);	
+	start->length = curr->length - nbytes;
+	freelist.size -= nbytes;
+
+	if(curr->length == nbytes)
+	{
+	    if((curr == freelist.head) && (curr->next == NULL)) 
+	    {
+		freelist.head->length -= nbytes;
+		freelist.head = freelist.head->next;
+	    }
+	    else if(curr == freelist.head)
+	    {
+		freelist.head->next = curr->next->next;
+		freelist.head->length = curr->next->length;
+		freelist.head = curr->next;
+	    }
+	    else if(curr->next == NULL) prev->next = NULL;
+	    else prev->next = curr->next;
+
+	    restore(ps);
+	    return (void *)curr;
+	}
+	else
+	{
+	    if(curr == freelist.head) 
+	    {
+		start->next = freelist.head->next;
+		freelist.head = start;
+		
+		restore(ps);
+		return (void *)curr;
+	    }
+	    else
+	    {
+		start->next = curr->next;	
+		leftover = start;
+		prev->next = leftover;
+		
+		restore(ps);
+		return (void *)curr;
+	    }
+	}	
+    }
+
+    restore(ps);   
+    return (void *)SYSERR;
 }

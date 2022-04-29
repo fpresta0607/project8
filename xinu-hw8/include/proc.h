@@ -54,7 +54,7 @@ typedef struct pentry
     int stklen;                 /**< stack length                            */
     char name[PNMLEN];          /**< process name                            */
     unsigned int tickets;
-    ulong  JOINQ;
+    unsigned int  JOINQ;
 } pcb;
 
 /* process initialization constants */

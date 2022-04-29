@@ -16,26 +16,6 @@
 	asm("mov %0, r0" : "=r"(status)); \
 	return status;
 
-syscall pthread_create(pthread_t *thread, pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)
-{
-        SYSCALL(PTCREATE);
-}
-
-syscall pthread_join(pthread_t thread, void **retval)
-{
-        SYSCALL(PTJOIN);
-}
-
-syscall pthread_mutex_lock(pthread_mutex_t *mutex)
-{
-        SYSCALL(PTLOCK);
-}
-
-syscall pthread_mutex_unlock(pthread_mutex_t *mutex)
-{
-        SYSCALL(PTUNLOCK);
-}
-
 /* syscall wrapper prototypes */
 syscall sc_none(int *);
 syscall sc_yield(int *);
@@ -43,10 +23,10 @@ syscall sc_getc(int *);
 syscall sc_putc(int *);
 syscall sc_getmem(int *);
 syscall sc_freemem(int *);
-syscall sc_ptcreate(int *);
-syscall sc_ptjoin(int *);
-syscall sc_ptlock(int *);
-syscall sc_ptunlock(int *);
+syscall sc_create(int *);
+syscall sc_join(int *);
+syscall sc_lock(int *);
+syscall sc_unlock(int *);
 
 /* table for determining how to call syscalls */
 const struct syscall_info syscall_table[] = {
@@ -63,10 +43,10 @@ const struct syscall_info syscall_table[] = {
     { 2, (void *)sc_none },     /* SYSCALL_SEEK      = 10 */
     { 4, (void *)sc_none },     /* SYSCALL_CONTROL   = 11 */
     { 1, (void *)sc_none },     /* SYSCALL_GETDEV    = 12 */
-    { 4, (void *)sc_ptcreate},	/* SYSCALL_PTCREATE  = 13 */
-    { 2, (void *)sc_ptjoin},	/* SYSCALL_PTJOIN    = 14 */
-    { 1, (void *)sc_ptlock},	/* SYSCALL_PTLOCK    = 15 */
-    { 1, (void *)sc_ptunlock},  /* SYSCALL_PTUNLOCK  = 16 */	
+    { 4, (void *)sc_create},	/* SYSCALL_PTCREATE  = 13 */
+    { 2, (void *)sc_join},	/* SYSCALL_PTJOIN    = 14 */
+    { 1, (void *)sc_lock},	/* SYSCALL_PTLOCK    = 15 */
+    { 1, (void *)sc_unlock},  /* SYSCALL_PTUNLOCK  = 16 */	
     { 1, (void *)sc_getmem},	/* SYSCALL_GETMEM    = 17 */
     { 2, (void *)sc_freemem},	/* SYSCALL_FREEMEM   = 18 */
 	
@@ -160,26 +140,32 @@ syscall  user_putc(int descrp, char character)
 
 
 //GETMEM AND FREEMEM 
-syscall sc_getmem(int *args)
+void * getmem(ulong nbytes)
 {
-    ulong nbytes = SCARG(ulong, args);
-    return (syscall)getmem(nbytes);
+    SYSCALL(GETMEM);
 }
 
-void *getmem(ulong nbytes)
-{
-    SYSCALL(GETMEM);  
-}
-
-syscall sc_freemem(int *args)
-{
-    void *memptr = SCARG(ulong, args);
-    ulong nbytes = SCARG(ulong, args);
-
-    return freemem(memptr, nbytes);
-}
-
-freemem(void *memptr, ulong nbytes)
+syscall freemem(void *memptr,ulong nbytes)
 {
     SYSCALL(FREEMEM);
+}
+
+syscall pthread_create(pthread_t *thread, pthread_attr_t *attr, void *(*start_routine) (void *), void *arg)
+{
+        SYSCALL(PTCREATE);
+}
+
+syscall pthread_join(pthread_t thread, void **retval)
+{
+        SYSCALL(PTJOIN);
+}
+
+syscall pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+        SYSCALL(PTLOCK);
+}
+
+syscall pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+        SYSCALL(PTUNLOCK);
 }                 

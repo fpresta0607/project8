@@ -51,9 +51,11 @@ void nulluser(void)
 
     enable();
 
-    /* Call the main program */
+    /* Call the main program */ 
     
-ready(create((void *) main, INITSTK, INITPRIO,"MAIN", 2, 0, NULL), 0);
+  
+    //testcases();    
+    ready(create((void *) main, INITSTK, INITPRIO,"MAIN", 2, 0, NULL), 0);
 //kprintf("HERE");
     /* null process has nothing else to do but cannot exit  */
     while (1)
@@ -169,3 +171,4 @@ static int sysinit(void)
 
     return OK;
 }
+

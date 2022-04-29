@@ -18,7 +18,7 @@
 
 static pid_typ newpid(void);
 void userret(void);
-
+void *getstk(ulong);
 
 /**
  * Create a new process to start running a function.
@@ -45,15 +45,11 @@ syscall create(void *funcaddr, ulong ssize, uint tickets, char *name, ulong narg
     
     //roufnd up to even boundary
   ////// kprintf("ssize = %d",ssize); 
-    saddr = (ulong *)getmem(ssize);  //allocate new stack and pid
-
+//saddr = (ulong*)getmem(ssize) + ssize;
 //kprintf("0x%08X = saddr",saddr);  
     pid = newpid();
 //kprintf("1");
-    if ((((ulong *)SYSERR) == saddr) || (SYSERR == pid))
-    {
-        return SYSERR;
-    }
+  
 
     numproc++;
     ppcb = &proctab[pid];
@@ -62,13 +58,16 @@ syscall create(void *funcaddr, ulong ssize, uint tickets, char *name, ulong narg
     strncpy(ppcb->name, name, PNMLEN);
     ppcb->stkptr = NULL;
     ppcb->state = PRSUSP;
-    ppcb->stkbase = (ulong*)(saddr-saddr);
+    ppcb->stkbase = (ulong*)getmem(ssize);
+    ppcb->stklen = ssize;
     ppcb->tickets = tickets;
-
-//kprintf("1");
-	
+    saddr = ((ulong)ppcb->stkbase)+ssize-4;	
+//kpriintf("1");
+    if(((ulong *)SYSERR) == ppcb->stkbase)
+    {
+	return SYSERR;    
+    }	
     /* Initialize stack with accounting block. */
-    saddr = ((ulong)saddr) + ssize - 4;
     *saddr = STACKMAGIC;
     *--saddr = pid;
     *--saddr = ppcb->stklen;

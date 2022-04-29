@@ -142,7 +142,8 @@ void testcases(void)
 		freemem((void*)getmem(8),8);
 	break;
 	case '6':
-	//	pthread_create(, NULL, create(),(void *) &thread_fil
+		kprintf("Race Condition\n\n");
+	//	main();
     	break;
 	default:
         break;

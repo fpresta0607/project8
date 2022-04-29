@@ -17,7 +17,7 @@
  */
 void *malloc(ulong size)
 {
-    struct memblock *pmem, *returnAddress;
+    struct memblock *pmem;
 
     /* we don't allocate 0 bytes. */
     if (0 == size)
@@ -32,14 +32,14 @@ void *malloc(ulong size)
       *      3) Set accounting info in pmem
       *      4) Return proper pointer to base of free memory region
       */
-	pmem->next = pmem;
-	
-	pmem->length = size;
-	
-	struct memblock *temp = getmem(size + sizeof(struct memblock));
-	if(temp!=(void*)SYSERR){pmem = temp;}
-	else{return SYSERR;}
-	returnAddress = (void *)(1 + pmem);
+size += 8;
+    pmem = (memblk *)getmem(size);
 
-    return returnAddress;
+    if(pmem == SYSERR) return NULL;
+
+    pmem->length = size;
+    pmem++;  
+ 
+    return (void *)pmem; 
+
 }

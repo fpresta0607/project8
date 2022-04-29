@@ -23,23 +23,24 @@ syscall kill(int pid)
     }
 
     ppcb = &proctab[pid];
-
+    freemem(ppcb->stkbase,ppcb->stklen);
     --numproc;
 //ready process in joinqueue
-while(!isempty(ppcb->JOINQ)){
+    while(!isempty(ppcb->JOINQ)){
 	ready(dequeue(ppcb->JOINQ), RESCHED_NO);
-}	
+    }	
     	
     switch (ppcb->state)
     {
     case PRCURR:
         ppcb->state = PRFREE;   /* suicide */
-	freemem(ppcb,ppcb->stklen);
 	resched();
 
     case PRREADY:
         remove(pid);
-
+   
+    case PRJOIN:
+	remove(pid);
     default:
         ppcb->state = PRFREE;
 	freemem(ppcb,ppcb->stklen);
